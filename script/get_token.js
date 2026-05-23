@@ -97,7 +97,7 @@ async function main() {
   const key = process.argv[2];
 
   if (!key) {
-    process.stderr.write('用法: node script/get_token.js <key>\n');
+    process.stderr.write('用法: node <skill_path>/script/get_token.js <key>\n');
     process.exit(1);
   }
 

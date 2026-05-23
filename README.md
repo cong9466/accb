@@ -106,7 +106,7 @@ curl http://127.0.0.1:4099/v1/credentials
   "mcpServers": {
     "accb-server": {
       "command": "node",
-      "args": ["<project_root>/server/dist/index.cjs"]
+      "args": ["<skill_path>/server/dist/index.cjs"]
     }
   }
 }
@@ -116,7 +116,7 @@ curl http://127.0.0.1:4099/v1/credentials
 ```toml
 [mcp_servers.accb_server]
 command = "node"
-args = ["<project_root>/server/dist/index.cjs"]
+args = ["<skill_path>/server/dist/index.cjs"]
 enabled = true
 startup_timeout_sec = 30
 ```
