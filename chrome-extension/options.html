@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>accb 配置</title>
+  <style>
+    :root {
+      --bg-color: #0f172a;
+      --card-bg: rgba(30, 41, 59, 0.7);
+      --border-color: rgba(255, 255, 255, 0.1);
+      --text-color: #f1f5f9;
+      --text-muted: #94a3b8;
+      --primary-color: #3b82f6;
+      --primary-hover: #2563eb;
+      --accent-color: #10b981;
+      --danger-color: #ef4444;
+      --danger-hover: #dc2626;
+      --gradient: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      font-family: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+      padding: 40px 20px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 960px;
+    }
+
+    header {
+      margin-bottom: 30px;
+      text-align: center;
+    }
+
+    h1 {
+      font-size: 2.2rem;
+      font-weight: 800;
+      background: var(--gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 8px;
+    }
+
+    .subtitle {
+      color: var(--text-muted);
+      font-size: 1rem;
+    }
+
+    .section-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 24px;
+      backdrop-filter: blur(12px);
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+    }
+
+    h2 {
+      font-size: 1.3rem;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 10px;
+    }
+
+    /* Form Styles */
+    .form-group-inline {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 16px;
+      align-items: flex-end;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      flex: 1;
+    }
+
+    label {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    input, select {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 10px 14px;
+      color: #fff;
+      font-size: 0.95rem;
+      transition: all 0.3s ease;
+      outline: none;
+    }
+
+    input:focus, select:focus {
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+    }
+
+    button {
+      background: var(--primary-color);
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    button:hover {
+      background: var(--primary-hover);
+      transform: translateY(-1px);
+    }
+
+    button.secondary {
+      background: transparent;
+      border: 1px solid var(--border-color);
+      color: var(--text-color);
+    }
+
+    button.secondary:hover {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: var(--text-muted);
+    }
+
+    button.danger {
+      background: var(--danger-color);
+    }
+
+    button.danger:hover {
+      background: var(--danger-hover);
+    }
+
+    /* Connection Status */
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.85rem;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-weight: 600;
+    }
+    .status-badge.connected {
+      background: rgba(16, 185, 129, 0.15);
+      color: var(--accent-color);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+    .status-badge.disconnected {
+      background: rgba(239, 68, 68, 0.15);
+      color: var(--danger-color);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    /* Rules List */
+    .rule-item {
+      background: rgba(15, 23, 42, 0.4);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: all 0.3s ease;
+    }
+
+    .rule-item:hover {
+      border-color: rgba(59, 130, 246, 0.4);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    .rule-info {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .rule-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .rule-meta {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      display: flex;
+      gap: 12px;
+    }
+
+    .meta-tag {
+      background: rgba(255, 255, 255, 0.05);
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      border: 1px solid var(--border-color);
+    }
+
+    .rule-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    /* Modal dialog style */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(15, 23, 42, 0.8);
+      backdrop-filter: blur(8px);
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+
+    .modal.active {
+      display: flex;
+    }
+
+    .modal-content {
+      background: #1e293b;
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      width: 100%;
+      max-width: 600px;
+      padding: 30px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+    }
+
+    .modal-header {
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .modal-body {
+      max-height: 60vh;
+      overflow-y: auto;
+      padding-right: 8px;
+    }
+
+    .modal-body::-webkit-scrollbar {
+      width: 6px;
+    }
+    .modal-body::-webkit-scrollbar-thumb {
+      background: var(--border-color);
+      border-radius: 3px;
+    }
+
+    .modal-footer {
+      margin-top: 24px;
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--gradient);
+      padding: 12px 24px;
+      border-radius: 8px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+      color: white;
+      font-weight: 600;
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.3s ease;
+      z-index: 1000;
+    }
+    .toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  </style>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <h1>accb</h1>
+    <div class="subtitle">浏览器凭证推送与本地 Agent 通信中继</div>
+  </header>
+
+  <!-- 1. Connection Config Card -->
+  <section class="section-card">
+    <h2>
+      <span>🔌 本地 MCP 服务连接配置</span>
+      <span id="connection-status" class="status-badge disconnected">未连接</span>
+    </h2>
+    <div class="form-group-inline">
+      <div class="form-group" style="flex: 1;">
+        <label for="mcp-server-url">MCP Server HTTP 地址</label>
+        <input type="text" id="mcp-server-url" value="http://127.0.0.1:4099" placeholder="e.g. http://127.0.0.1:4099">
+      </div>
+      <button id="btn-test-connection" type="button">测试连接</button>
+    </div>
+  </section>
+
+  <!-- 2. Extraction Rules List Card -->
+  <section class="section-card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+      <h2>📋 凭证提取规则列表</h2>
+      <button id="btn-new-rule" style="background: var(--accent-color)">➕ 新建提取规则</button>
+    </div>
+    <div id="rules-list">
+      <div style="text-align: center; padding: 40px; color: var(--text-muted);">
+        暂无规则。点击“新建提取规则”开始配置。
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- Rule Edit Modal -->
+<div id="rule-modal" class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3 style="font-size: 1.4rem;" id="modal-title">新建规则</h3>
+      <button id="modal-close" class="secondary" style="padding: 4px 8px;">✕</button>
+    </div>
+    <div class="modal-body">
+      <form id="rule-form">
+        <input type="hidden" id="rule-id">
+
+        <div class="form-group">
+          <label for="rule-name">规则名称</label>
+          <input type="text" id="rule-name" placeholder="例如：CloudDevops Token" required>
+        </div>
+
+        <div class="form-group">
+          <label for="url-pattern">目标域名/匹配模式 (URL Pattern)</label>
+          <input type="text" id="url-pattern" placeholder="例如：*://*.clouddevops.com/*" required>
+        </div>
+
+        <div class="form-group">
+          <label for="target-key">推送至 MCP 的键名 (Target MCP Key)</label>
+          <input type="text" id="target-key" placeholder="例如：clouddevops_token" required>
+        </div>
+
+        <div class="form-group">
+          <label for="source-type">提取数据源</label>
+          <select id="source-type">
+            <option value="localStorage">LocalStorage</option>
+            <option value="sessionStorage">SessionStorage</option>
+            <option value="cookie">Cookie</option>
+          </select>
+        </div>
+
+        <div id="group-key-name" class="form-group">
+          <label for="source-key">对应字段 Key / Name</label>
+          <input type="text" id="source-key" placeholder="例如：jwt_token 或 sessionid" required>
+        </div>
+
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button id="btn-cancel" class="secondary">取消</button>
+      <button id="btn-save" type="button">保存规则</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast">提示信息</div>
+
+<script src="options.js"></script>
+</body>
+</html>

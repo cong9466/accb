@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    :root {
+      --bg-color: #0f172a;
+      --card-bg: rgba(30, 41, 59, 0.7);
+      --border-color: rgba(255, 255, 255, 0.1);
+      --text-color: #f1f5f9;
+      --text-muted: #94a3b8;
+      --primary-color: #3b82f6;
+      --primary-hover: #2563eb;
+      --accent-color: #10b981;
+      --danger-color: #ef4444;
+      --gradient: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+    }
+
+    body {
+      width: 320px;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      font-family: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
+      margin: 0;
+      padding: 16px;
+      overflow-x: hidden;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 10px;
+    }
+
+    .title-group h1 {
+      font-size: 1.1rem;
+      margin: 0;
+      background: var(--gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      font-weight: 800;
+    }
+
+    .title-group p {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin: 2px 0 0 0;
+    }
+
+    .settings-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 1.2rem;
+      transition: color 0.2s;
+    }
+
+    .settings-btn:hover {
+      color: #fff;
+    }
+
+    .status-card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      font-size: 0.85rem;
+    }
+
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 600;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: var(--danger-color);
+    }
+
+    .status-dot.connected {
+      background-color: var(--accent-color);
+      box-shadow: 0 0 8px var(--accent-color);
+    }
+
+    .section-title {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 8px;
+    }
+
+    .rules-container {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 220px;
+      overflow-y: auto;
+    }
+
+    .matching-rule-item {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .rule-name {
+      font-size: 0.85rem;
+      font-weight: 700;
+    }
+
+    .rule-type-badge {
+      font-size: 0.7rem;
+      background: rgba(255, 255, 255, 0.05);
+      padding: 1px 6px;
+      border-radius: 4px;
+      color: var(--text-muted);
+    }
+
+    .sync-btn {
+      background: var(--primary-color);
+      border: none;
+      color: #fff;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .sync-btn:hover {
+      background: var(--primary-hover);
+    }
+
+    .no-match {
+      text-align: center;
+      padding: 24px;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      border: 1px dashed var(--border-color);
+      border-radius: 8px;
+    }
+
+    .footer-link {
+      display: block;
+      text-align: center;
+      font-size: 0.8rem;
+      color: var(--primary-color);
+      text-decoration: none;
+      margin-top: 16px;
+    }
+    .footer-link:hover {
+      text-decoration: underline;
+    }
+  </style>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <div class="header">
+    <div class="title-group">
+      <h1>accb</h1>
+      <p>Agent 凭证网桥</p>
+    </div>
+    <button id="btn-settings" class="settings-btn" title="配置规则">⚙️</button>
+  </div>
+
+  <div class="status-card">
+    <span>MCP Server 状态</span>
+    <div class="status-indicator">
+      <div id="status-dot" class="status-dot"></div>
+      <span id="status-text">未连接</span>
+    </div>
+  </div>
+
+  <div>
+    <div class="section-title">匹配当前网站的规则</div>
+    <div id="matching-rules" class="rules-container">
+      <div class="no-match">
+        当前网站没有匹配的提取规则
+      </div>
+    </div>
+  </div>
+
+  <a href="#" id="go-to-options" class="footer-link">前往配置页面管理规则 →</a>
+
+  <script src="popup.js"></script>
+</body>
+</html>
