@@ -284,31 +284,7 @@ function fetchFromPrimary(endpoint: string): Promise<string> {
   });
 }
 
-const isAlreadyRunning = await checkStatus(HTTP_PORT);
-if (isAlreadyRunning) {
-  isProxyMode = true;
-  console.error(`[ACCB] Another accb-server instance is already running on port ${HTTP_PORT}. Running in PROXY mode.`);
-} else {
-  // 端口没被 accb-server 占用，但可能被其他进程占用，强杀之
-  killProcessOnPort(HTTP_PORT);
-  
-  // 启动 HTTP 服务
-  try {
-    const server = app.listen(HTTP_PORT, "127.0.0.1", () => {
-      console.error(`[ACCB] HTTP Server listening on http://127.0.0.1:${HTTP_PORT}`);
-    });
-    server.on("error", (err: any) => {
-      console.error(`[ACCB] HTTP Server error:`, err.message);
-      if (err.code === "EADDRINUSE") {
-        isProxyMode = true;
-        console.error(`[ACCB] Port ${HTTP_PORT} is in use. Falling back to PROXY mode.`);
-      }
-    });
-  } catch (err: any) {
-    console.error(`[ACCB] Failed to start HTTP Server, falling back to PROXY mode. Error:`, err.message);
-    isProxyMode = true;
-  }
-}
+// Startup logic moved inside async main() function at the bottom of the file.
 
 // ==========================================
 // 3. 启动 MCP Server (Stdio 传输)
@@ -470,6 +446,39 @@ mcpServer.setRequestHandler(CallToolRequestSchema, async (request) => {
   }
 });
 
-const transport = new StdioServerTransport();
-await mcpServer.connect(transport);
-console.error("[ACCB] MCP Server running on stdio transport.");
+async function main() {
+  const isAlreadyRunning = await checkStatus(HTTP_PORT);
+  if (isAlreadyRunning) {
+    isProxyMode = true;
+    console.error(`[ACCB] Another accb-server instance is already running on port ${HTTP_PORT}. Running in PROXY mode.`);
+  } else {
+    // 端口没被 accb-server 占用，但可能被其他进程占用，强杀之
+    killProcessOnPort(HTTP_PORT);
+    
+    // 启动 HTTP 服务
+    try {
+      const server = app.listen(HTTP_PORT, "127.0.0.1", () => {
+        console.error(`[ACCB] HTTP Server listening on http://127.0.0.1:${HTTP_PORT}`);
+      });
+      server.on("error", (err: any) => {
+        console.error(`[ACCB] HTTP Server error:`, err.message);
+        if (err.code === "EADDRINUSE") {
+          isProxyMode = true;
+          console.error(`[ACCB] Port ${HTTP_PORT} is in use. Falling back to PROXY mode.`);
+        }
+      });
+    } catch (err: any) {
+      console.error(`[ACCB] Failed to start HTTP Server, falling back to PROXY mode. Error:`, err.message);
+      isProxyMode = true;
+    }
+  }
+
+  const transport = new StdioServerTransport();
+  await mcpServer.connect(transport);
+  console.error("[ACCB] MCP Server running on stdio transport.");
+}
+
+main().catch((err) => {
+  console.error("[ACCB] Fatal error on startup:", err);
+  process.exit(1);
+});
