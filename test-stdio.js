@@ -30,7 +30,7 @@ async function simulatePluginPush() {
 function run() {
   console.log('1. 拉起 MCP 进程 (指定端口 4200)...');
 
-  const mcp = spawn('node', ['mcp-server/dist/index.js'], {
+  const mcp = spawn('node', ['server/dist/index.cjs'], {
     env: {
       ...process.env,
       ACCB_PORT: '4200'
@@ -45,6 +45,9 @@ function run() {
     console.log('\n--- Received on stdout ---');
     console.log(data.toString());
     console.log('--------------------------');
+    if (responseBuffer.includes('"result":') || responseBuffer.includes('"error":')) {
+      mcp.kill();
+    }
   });
 
   mcp.stderr.on('data', async (data) => {
@@ -53,7 +56,7 @@ function run() {
       console.log('   [MCP Log]:', logLine);
     }
 
-    if (logLine.includes('HTTP Server listening') && !serverReady) {
+    if (logLine.includes('HTTP 服务已启动') && !serverReady) {
       serverReady = true;
       
       // 等待 200 毫秒确保端口绑定完成

@@ -36,11 +36,11 @@ if (process.env.ACCB_PORT) {
       const config = JSON.parse(configRaw);
       if (config.port) {
         HTTP_PORT = parseInt(config.port);
-        console.error(`[ACCB] Loaded HTTP port from config.json: ${HTTP_PORT}`);
+        console.error(`[accb] 端口配置已加载: ${HTTP_PORT}`);
       }
     }
   } catch (err: any) {
-    console.error(`[ACCB] Failed to parse config.json, using default port 4099. Error:`, err.message);
+    console.error(`[accb] 配置文件解析失败，使用默认端口 4099。错误:`, err.message);
   }
 }
 
@@ -69,7 +69,7 @@ app.post("/v1/credentials", (req, res) => {
   };
 
   credentialStore.set(key, credential);
-  console.error(`[ACCB] Saved: key=${key}, source=${source}, length=${value.length}`);
+  console.error(`[accb] 已保存: key=${key}, source=${source}, length=${value.length}`);
   res.json({ success: true, message: `Credential '${key}' saved successfully.` });
 });
 
@@ -103,7 +103,7 @@ app.get("/v1/status", (req, res) => {
 // Mock 站点服务（用于本地联合调试）
 // ==========================================
 app.post("/mock/login", (req, res) => {
-  console.error("[ACCB Mock] Mock Login API triggered");
+  console.error("[accb Mock] Mock Login API triggered");
   res.json({
     status: "success",
     data: {
@@ -186,13 +186,13 @@ app.get("/mock/index.html", (req, res) => {
 // 检查并强杀占用该端口的本地进程 (防止 EADDRINUSE)
 function killProcessOnPort(port: number) {
   try {
-    console.error(`[ACCB] Checking if port ${port} is occupied...`);
+    console.error(`[accb] 检查端口 ${port} 占用情况...`);
     let stdout = "";
     if (process.platform === "win32") {
       try {
         stdout = execSync(`netstat -ano | findstr LISTENING | findstr :${port}`, { encoding: "utf8" });
       } catch (e) {
-        console.error(`[ACCB] Port ${port} is currently free.`);
+        console.error(`[accb] 端口 ${port} 空闲`);
         return;
       }
 
@@ -202,12 +202,12 @@ function killProcessOnPort(port: number) {
         if (parts.length >= 5) {
           const pid = parts[parts.length - 1];
           if (pid && pid !== "0" && parseInt(pid) !== process.pid) {
-            console.error(`[ACCB] Port ${port} is occupied by PID ${pid}. Force killing it...`);
+            console.error(`[accb] 端口 ${port} 被 PID ${pid} 占用，正在释放...`);
             try {
               execSync(`taskkill /F /PID ${pid}`);
-              console.error(`[ACCB] Successfully killed process ${pid}.`);
+              console.error(`[accb] 已终止进程 ${pid}`);
             } catch (err: any) {
-              console.error(`[ACCB] Failed to kill process ${pid}:`, err.message);
+              console.error(`[accb] 无法终止进程 ${pid}:`, err.message);
             }
           }
         }
@@ -219,7 +219,7 @@ function killProcessOnPort(port: number) {
         const pids = stdout.split("\n").filter(Boolean);
         for (const pid of pids) {
           if (parseInt(pid) !== process.pid) {
-            console.error(`[ACCB] Port ${port} is occupied by PID ${pid}. Killing it...`);
+            console.error(`[accb] 端口 ${port} 被 PID ${pid} 占用，正在释放...`);
             execSync(`kill -9 ${pid}`);
           }
         }
@@ -228,16 +228,14 @@ function killProcessOnPort(port: number) {
     // 等待 300ms 确保 OS 释放端口
     execSync(`node -e "setTimeout(() => {}, 300)"`);
   } catch (err: any) {
-    console.error(`[ACCB] Error checking/killing process on port ${port}:`, err.message);
+    console.error(`[accb] 检查/释放端口 ${port} 时出错:`, err.message);
   }
 }
 
 // ==========================================
-// 2.5 检查是否已有 Primary 实例运行，以决定是否启用 Proxy Mode
+// 2.5 检查端口健康状态
 // ==========================================
-let isProxyMode = false;
-
-function checkStatus(port: number): Promise<boolean> {
+function checkPortHealth(port: number): Promise<boolean> {
   return new Promise((resolve) => {
     const req = http.get(`http://127.0.0.1:${port}/v1/status`, (res) => {
       let data = "";
@@ -261,31 +259,6 @@ function checkStatus(port: number): Promise<boolean> {
   });
 }
 
-function fetchFromPrimary(endpoint: string): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const req = http.get(`http://127.0.0.1:${HTTP_PORT}${endpoint}`, (res) => {
-      if (res.statusCode !== 200) {
-        reject(new Error(`Primary server returned status ${res.statusCode}`));
-        return;
-      }
-      let data = "";
-      res.on("data", (chunk) => { data += chunk; });
-      res.on("end", () => {
-        resolve(data);
-      });
-    });
-    req.on("error", (err) => {
-      reject(err);
-    });
-    req.setTimeout(1000, () => {
-      req.destroy();
-      reject(new Error("Timeout connecting to primary server"));
-    });
-  });
-}
-
-// Startup logic moved inside async main() function at the bottom of the file.
-
 // ==========================================
 // 3. 启动 MCP Server (Stdio 传输)
 // ==========================================
@@ -306,7 +279,7 @@ mcpServer.setRequestHandler(ListToolsRequestSchema, async () => {
     tools: [
       {
         name: "get_credential",
-        description: "Retrieve the plaintext value of a specific token/credential by its key (e.g. 'clouddevops_token').",
+        description: "Retrieve a stored context value by its key.",
         inputSchema: {
           type: "object",
           properties: {
@@ -320,7 +293,7 @@ mcpServer.setRequestHandler(ListToolsRequestSchema, async () => {
       },
       {
         name: "list_credentials",
-        description: "List all currently stored credentials along with their domains and raw plaintext values.",
+        description: "List all currently stored context values with their metadata.",
         inputSchema: {
           type: "object",
           properties: {},
@@ -338,30 +311,6 @@ mcpServer.setRequestHandler(CallToolRequestSchema, async (request) => {
       const key = args?.key as string;
       if (!key) {
         throw new Error("Missing parameter 'key'");
-      }
-
-      if (isProxyMode) {
-        try {
-          const value = await fetchFromPrimary(`/v1/credentials/${key}`);
-          return {
-            content: [
-              {
-                type: "text",
-                text: value,
-              },
-            ],
-          };
-        } catch (err: any) {
-          return {
-            isError: true,
-            content: [
-              {
-                type: "text",
-                text: `Error: Failed to fetch from primary accb-server on port ${HTTP_PORT}. ${err.message}`,
-              },
-            ],
-          };
-        }
       }
 
       const cred = credentialStore.get(key);
@@ -388,31 +337,6 @@ mcpServer.setRequestHandler(CallToolRequestSchema, async (request) => {
     }
 
     if (name === "list_credentials") {
-      if (isProxyMode) {
-        try {
-          const rawList = await fetchFromPrimary(`/v1/credentials`);
-          const list = JSON.parse(rawList);
-          return {
-            content: [
-              {
-                type: "text",
-                text: JSON.stringify({ credentials: list }, null, 2),
-              },
-            ],
-          };
-        } catch (err: any) {
-          return {
-            isError: true,
-            content: [
-              {
-                type: "text",
-                text: `Error: Failed to fetch from primary accb-server on port ${HTTP_PORT}. ${err.message}`,
-              },
-            ],
-          };
-        }
-      }
-
       const list = Array.from(credentialStore.values()).map((cred) => ({
         key: cred.key,
         value: cred.value,
@@ -433,7 +357,7 @@ mcpServer.setRequestHandler(CallToolRequestSchema, async (request) => {
 
     throw new Error(`Tool '${name}' not found.`);
   } catch (error: any) {
-    console.error(`[ACCB] Error executing tool ${name}:`, error);
+    console.error(`[accb] 工具 ${name} 执行出错:`, error);
     return {
       isError: true,
       content: [
@@ -447,38 +371,32 @@ mcpServer.setRequestHandler(CallToolRequestSchema, async (request) => {
 });
 
 async function main() {
-  const isAlreadyRunning = await checkStatus(HTTP_PORT);
-  if (isAlreadyRunning) {
-    isProxyMode = true;
-    console.error(`[ACCB] Another accb-server instance is already running on port ${HTTP_PORT}. Running in PROXY mode.`);
-  } else {
-    // 端口没被 accb-server 占用，但可能被其他进程占用，强杀之
-    killProcessOnPort(HTTP_PORT);
-    
-    // 启动 HTTP 服务
-    try {
-      const server = app.listen(HTTP_PORT, "127.0.0.1", () => {
-        console.error(`[ACCB] HTTP Server listening on http://127.0.0.1:${HTTP_PORT}`);
-      });
-      server.on("error", (err: any) => {
-        console.error(`[ACCB] HTTP Server error:`, err.message);
-        if (err.code === "EADDRINUSE") {
-          isProxyMode = true;
-          console.error(`[ACCB] Port ${HTTP_PORT} is in use. Falling back to PROXY mode.`);
-        }
-      });
-    } catch (err: any) {
-      console.error(`[ACCB] Failed to start HTTP Server, falling back to PROXY mode. Error:`, err.message);
-      isProxyMode = true;
-    }
+  // Check if another accb instance is already healthy on this port
+  const alreadyRunning = await checkPortHealth(HTTP_PORT);
+  if (alreadyRunning) {
+    console.error(`[accb] 服务已在端口 ${HTTP_PORT} 运行，当前实例退出。`);
+    process.exit(0);
   }
 
-  const transport = new StdioServerTransport();
-  await mcpServer.connect(transport);
-  console.error("[ACCB] MCP Server running on stdio transport.");
+  // Kill foreign process on port
+  killProcessOnPort(HTTP_PORT);
+
+  // Start HTTP server
+  app.listen(HTTP_PORT, '127.0.0.1', () => {
+    console.error(`[accb] HTTP 服务已启动: http://127.0.0.1:${HTTP_PORT}`);
+  });
+
+  // MCP stdio is optional (graceful failure for background/detached mode)
+  try {
+    const transport = new StdioServerTransport();
+    await mcpServer.connect(transport);
+    console.error('[accb] MCP stdio 传输已连接');
+  } catch (err) {
+    console.error('[accb] MCP stdio 不可用，仅以 HTTP 模式运行。');
+  }
 }
 
 main().catch((err) => {
-  console.error("[ACCB] Fatal error on startup:", err);
+  console.error("[accb] 启动时发生致命错误:", err);
   process.exit(1);
 });

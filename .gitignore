@@ -33,7 +33,7 @@ Thumbs.db
 
 # Local custom cache or runtime keys
 .accb-app-token
-mcp-server/.accb-app-token
+server/.accb-app-token
 
 # TypeScript compilation info
 *.tsbuildinfo

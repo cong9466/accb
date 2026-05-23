@@ -1,7 +1,7 @@
 {
   "name": "accb-server",
   "version": "1.0.0",
-  "description": "Agent Context & Credential Bridge MCP Server",
+  "description": "Agent Context & Credential Bridge Server",
   "type": "module",
   "main": "dist/index.cjs",
   "scripts": {
