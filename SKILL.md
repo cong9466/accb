@@ -1,7 +1,6 @@
-# Skill: accb
-
-从本地 `accb-server` 中拉取浏览器捕获并推送上来的用户敏感凭证（如 JWT Token、Session ID 或 Cookie 等），或者引导用户快速配置 `accb-server` 本地 MCP 服务和安装 `accb` 浏览器插件。
-
+---
+name: accb
+description: 从本地 `accb-server` 中拉取浏览器捕获并推送上来的用户敏感凭证（如 JWT Token、Session ID 或 Cookie 等），或者引导用户快速配置 `accb-server` 本地 MCP 服务和安装 `accb` 浏览器插件。
 ---
 
 ## 📖 技能描述 (Description)
