@@ -1,99 +1,159 @@
 ---
 name: accb
-description: 从本地 `accb-server` 中拉取浏览器捕获并推送上来的用户敏感凭证（如 JWT Token、Session ID 或 Cookie 等），或者引导用户快速配置 `accb-server` 本地 MCP 服务和安装 `accb` 浏览器插件。
+description: 从本地 accb-server 获取浏览器自动推送的用户凭证（JWT Token / Session / Cookie），并引导用户完成 MCP 挂载与浏览器插件安装。
 ---
 
-## 📖 技能描述 (Description)
+## 📖 技能描述
 
-本技能供 AI Agent (如 Claude Code、Codex、OpenCode 等) 在执行开发任务或发起 API 请求时使用：
-1. **获取凭证**：大模型可以通过本地执行命令快速获取 Token，无需提示用户手动拷贝或泄露私密配置。
-2. **引导安装与配置 (自动/半自动)**：如果大模型发现本地 `accb-server` 尚未启动或未配置 MCP 协议，可读取本技能指南自动帮用户生成配置或引导用户配置启动。
+本技能为 AI Agent（Claude Code、Codex、OpenCode、Cline、Cursor 等）提供透明的凭证获取能力。
+当 Agent 需要调用受保护的 API 时，可通过本技能自动拿到用户浏览器中的明文 Token，无需用户手动拷贝。
 
----
-
-## 🚀 触发时机 (Triggers)
-
-在大模型遇到以下情况时应当自动调用本技能：
-1. Agent 准备请求内部或外部受保护的平台 API (例如 `clouddevops` API) 之前。
-2. 之前的接口请求返回了 `401 Unauthorized` 或 `403 Forbidden`。
-3. 用户要求 Agent “调个接口”或者“去开发平台查看项目列表”时。
-4. **[初次使用]** Agent 被加载到此项目目录时，如果检测到本地 MCP 服务尚未运行或未注册，**应优先引导用户进行 MCP 挂载与浏览器插件安装**。
+**零依赖部署**：`accb-server` 已预编译为单文件 `mcp-server/dist/index.cjs`，内含所有依赖，仅需 Node.js 即可运行，无需执行 `npm install`。
 
 ---
 
-## 🛠️ 调用与配置规范 (Execution & Configuration Guide)
+## 🚀 触发时机
 
-### 1. 凭证获取通道优先级策略 (Credential Access Priority)
+在以下场景中，Agent 应自动调用本技能：
+1. 准备请求受保护的平台 API（例如 CloudDevOps）之前。
+2. 接口请求返回 `401 Unauthorized` 或 `403 Forbidden`。
+3. 用户要求 Agent "调个接口"、"去平台查一下"等操作时。
 
-大模型在需要读取目标凭证时，**必须遵循以下优先级路径**：
+---
 
-*   **【首选】通道一：MCP Server 直接调用**
-    如果大模型检测到当前可用 MCP Tools 列表中包含 `get_credential` 与 `list_credentials`（且注册服务为 `accb-server`），**应优先且直接使用 MCP Tool 进行查询**。这是性能最高且最推荐的通道。
-*   **【备选】通道二：本地脚本 / HTTP 接口回退**
-    如果检测到当前环境下没有加载 `accb-server`（如不支持 MCP 挂载，或者主服务离线），则**回退使用以下两种方式之一获取**：
-    1. **执行 Node.js 脚本**：
-       ```bash
-       node script/get_token.js <credential_key>
-       ```
-       > **参数说明**：`credential_key` 为凭证键名（如 `clouddevops_token`），脚本成功执行将以状态码 `0` 在 `stdout` 中输出明文 Token。
-    2. **直接发起本地 HTTP 请求**（以默认端口 4099 为例）：
-       ```bash
-       curl http://127.0.0.1:4099/v1/credentials/<credential_key>
-       ```
+## 🛠️ 凭证获取决策流程（Agent 必须严格遵循）
 
-### 2. 自动/引导配置 MCP 服务 (Agent Configures MCP)
+```
+开始
+ │
+ ▼
+当前可用 MCP Tools 中是否存在 get_credential / list_credentials ?
+ │
+ ├── 是 ──▶ 调用 get_credential 获取凭证
+ │           │
+ │           返回了凭证值？
+ │           ├── 是 ──▶ ✅ 完成
+ │           └── 否（not found）──▶ 提示用户安装浏览器插件并刷新目标网页（见 Step 3）
+ │
+ └── 否 ──▶ 向用户建议配置 accb-server（见 Step 2）
+              │
+              用户是否同意？
+              ├── 同意 ──▶ 帮用户写入 MCP 配置 ──▶ 提示重启客户端 ──▶ 回到流程开头
+              └── 明确拒绝 ──▶ 降级方案（见底部"降级通道"）
+```
 
-`accb` 提供了完整的本地 MCP Server（位于 `mcp-server/` 目录下）。为了让大模型在 Cline/Cursor 等客户端中能直接以 Tool 形式调用 `get_credential` 工具，Agent 可以**协助用户完成以下配置**：
+> **核心原则**：MCP 是正道。Agent 检测到 `accb-server` 未配置时，**必须先建议用户配置**，而不是直接跳到 HTTP 回退。只有当用户**明确表示不想配置**时，才使用降级通道。
 
-*   **获取绝对路径**：
-    大模型在配置前，**必须先获取此项目（或本 `SKILL.md` 文件）在用户本地的绝对路径** `<absolute_project_root>`（例如可通过命令行 `pwd`，或者查看当前工作区路径获取）。
-*   **Cline / VS Code Extension 挂载配置 (JSON)**：
-    向 `C:/Users/用户名/AppData/Roaming/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json` 中自动或引导写入以下配置（请将下面的 `<absolute_project_root>` 替换为获取到的实际 absolute 路径，Windows 系统下路径中的斜杠建议使用 `/`）：
-    ```json
-    {
-      "mcpServers": {
-        "accb-server": {
-          "command": "node",
-          "args": [
-            "<absolute_project_root>/mcp-server/dist/index.cjs"
-          ]
-        }
-      }
+---
+
+## 📋 Step 1：检测 accb-server 是否已挂载
+
+Agent 检查自己当前可调用的 MCP Tool 列表：
+- 如果包含 `get_credential` 和 `list_credentials`（来自 `accb-server`）→ 直接使用，跳到 Step 4。
+- 如果不包含 → 进入 Step 2，引导用户配置。
+
+---
+
+## 🔧 Step 2：引导用户配置 accb-server（MCP 挂载）
+
+**Agent 必须先获取本项目的绝对路径**（通过 `pwd` 或工作区信息），记为 `<absolute_project_root>`。
+
+然后根据用户使用的客户端，引导写入对应的 MCP 配置：
+
+### Cline / Cursor（JSON 格式）
+
+向 `cline_mcp_settings.json` 中写入：
+```json
+{
+  "mcpServers": {
+    "accb-server": {
+      "command": "node",
+      "args": [
+        "<absolute_project_root>/mcp-server/dist/index.cjs"
+      ]
     }
-    ```
-*   **Codex / OpenCode 挂载配置 (TOML)**：
-    向 Codex / OpenCode 的配置文件中写入或引导用户添加以下配置（请同样将下面的 `<absolute_project_root>` 替换为实际 absolute 路径，斜杠建议使用 `/`）：
-    ```toml
-    [mcp_servers.accb_server]
-    command = "node"
-    args = ["<absolute_project_root>/mcp-server/dist/index.cjs"]
-    enabled = true
-    startup_timeout_sec = 30
-    ```
-*   **启动/测试本地服务**：
-    指示用户或由 Agent 直接在 `mcp-server` 目录下运行：
-    ```bash
-    cd mcp-server
-    npm install
-    npm run build
-    npm run start
-    ```
+  }
+}
+```
 
-### 3. 引导安装浏览器插件 (Prompt User to Install Extension)
+### Codex / OpenCode（TOML 格式）
 
-> [!IMPORTANT]
-> Agent 应主动向用户发送友好提示，引导其加载 `accb` 浏览器插件。
+向配置文件中添加：
+```toml
+[mcp_servers.accb_server]
+command = "node"
+args = ["<absolute_project_root>/mcp-server/dist/index.cjs"]
+enabled = true
+startup_timeout_sec = 30
+```
 
-**Agent 回复话术模板**：
-> "为了使 accb 正常工作，请在 Chrome 浏览器中加载本项目中的浏览器扩展：
-> 1. 打开 Chrome 浏览器并访问 `chrome://extensions/`
-> 2. 开启右上角的 **“开发者模式”**
-> 3. 点击 **“加载已解压的扩展程序”**，选择项目中的 `chrome-extension/` 目录
-> 4. 在插件选项页中配置本地地址（默认 `http://127.0.0.1:4099`）并添加抓取规则。"
+### Claude Code
+
+向 `~/.claude/settings.json` 的 `mcpServers` 字段中写入：
+```json
+{
+  "accb-server": {
+    "command": "node",
+    "args": [
+      "<absolute_project_root>/mcp-server/dist/index.cjs"
+    ]
+  }
+}
+```
+
+> 配置完成后提示用户：**请重新加载/重启 Agent 客户端，使 MCP 配置生效。**
 
 ---
 
-## 📝 开发者备注
+## 🌐 Step 3：引导用户安装浏览器插件
 
-1. 使用本技能前，请确认本地的 `accb-server` 服务已经运行，且浏览器中安装的配置插件已处于“已连接”状态。
-2. 插件会在您刷新匹配的网页时自动执行 Onload 提取并推送到本地，无需手动处理。
+> Agent 在以下两种情况下必须引导用户安装浏览器插件：
+> 1. 首次配置 accb-server 后（Step 2 完成时）。
+> 2. 调用 `get_credential` 返回凭证不存在（credential not found）时。
+
+Agent 应向用户发送以下提示（将 `<absolute_project_root>` 替换为实际绝对路径）：
+
+> 为了让 accb 能自动获取您浏览器中的 Token，请安装 Chrome 扩展：
+> 1. 打开 Chrome 浏览器，访问 `chrome://extensions/`
+> 2. 开启右上角的 **"开发者模式"**
+> 3. 点击 **"加载已解压的扩展程序"**，选择目录：`<absolute_project_root>/chrome-extension`
+> 4. 进入插件选项页，配置本地服务地址（默认 `http://127.0.0.1:4099`），并添加凭证抓取规则
+> 5. 打开或刷新目标网页，Token 将自动推送到本地
+
+---
+
+## ✅ Step 4：使用 MCP Tool 获取凭证
+
+当 `accb-server` 已挂载并生效后，Agent 直接调用：
+
+- **`get_credential`**：传入凭证 key（如 `clouddevops_token`），返回明文 Token 值。
+- **`list_credentials`**：列出当前所有已缓存的凭证及其元信息。
+
+**异常处理**：
+- 如果 `get_credential` 返回 "not found" → 提示用户检查浏览器插件是否已安装，以及是否已刷新目标网页（见 Step 3）。
+- 如果工具调用超时或连接失败 → 可能是 accb-server 进程异常，建议用户重启 Agent 客户端。
+
+### 快速验证
+
+配置完成后，Agent 可调用 `list_credentials` 确认是否有凭证被成功推送：
+- 返回非空列表 → 一切正常，可以正常使用。
+- 返回空列表 → 提示用户先在浏览器中打开/刷新目标网页触发自动推送。
+
+---
+
+## ⚠️ 降级通道（仅在用户明确拒绝配置 MCP 时使用）
+
+> [!WARNING]
+> 以下方式仅作为用户拒绝配置 MCP 后的临时替代，Agent 不应主动选择此路径。
+> 使用前需确保 accb-server 服务已在后台运行（执行 `node <absolute_project_root>/mcp-server/dist/index.cjs`）。
+
+### 方式一：执行本地 Node 脚本
+```bash
+node <absolute_project_root>/script/get_token.js <credential_key>
+```
+成功时以状态码 `0` 在 `stdout` 输出明文 Token，失败时状态码 `1`。
+
+### 方式二：发起本地 HTTP 请求
+```bash
+curl http://127.0.0.1:4099/v1/credentials/<credential_key>
+```
